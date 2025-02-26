@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Send, User, Bot } from 'lucide-react'
 import { getScrapes } from '../Api/Endpoints'
 
@@ -7,36 +7,43 @@ export default function Chatbot() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef(null)
+
+  // Función para hacer scroll hacia el último mensaje
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  // Hacer scroll cuando cambian los mensajes
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   const extractHashtags = (text) => {
     const hashtagRegex = /#[\w\u00C0-\u00FF]+/g
     const matches = text.match(hashtagRegex)
-    return matches ? matches.map(tag => tag.substring(1)) : [] // Elimina el símbolo # de los hashtags
+    return matches ? matches.map(tag => tag.substring(1)) : []
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (input.trim()) {
-      // Agregar mensaje del usuario
       setMessages([...messages, { role: 'user', content: input }])
       const userInput = input
       setInput('')
       setIsLoading(true)
       
-      // Mensaje de espera
       setMessages(prev => [
         ...prev,
         { role: 'assistant', content: 'Espera hasta que obtengamos los mejores datos de los hashtags que ingresaste...' }
       ])
       
       try {
-        // Extraer hashtags del texto ingresado por el usuario
         const hashtags = extractHashtags(userInput)
         
-        // Si no hay hashtags, informar al usuario
         if (hashtags.length === 0) {
           setMessages(prev => {
-            const updatedMessages = prev.slice(0, -1) // Elimina el mensaje de espera
+            const updatedMessages = prev.slice(0, -1)
             return [...updatedMessages, { 
               role: 'assistant', 
               content: 'No he detectado ningún hashtag en tu mensaje. Por favor, ingresa uno o más hashtags comenzando con el símbolo #, como por ejemplo #tecnología o #marketing.' 
@@ -45,15 +52,11 @@ export default function Chatbot() {
           return
         }
 
-        // Llamada real a la API
         const data = await getScrapes(hashtags, 10, 'top')
         
-        // Actualiza el último mensaje (de espera) con la respuesta real
         setMessages(prev => {
-          // Creamos una copia de los mensajes previos excepto el último (mensaje de espera)
           const updatedMessages = prev.slice(0, -1)
           
-          // Formatea la respuesta de la API para mostrarla en el chat
           let formattedResponse = 'Aquí está la información que encontramos:'
           
           if (data && Array.isArray(data)) {
@@ -69,11 +72,9 @@ export default function Chatbot() {
             formattedResponse = 'No encontramos información específica para esos hashtags. Intenta con otros términos.'
           }
           
-          // Agrega el nuevo mensaje con la respuesta real
           return [...updatedMessages, { role: 'assistant', content: formattedResponse }]
         })
       } catch (error) {
-        // En caso de error, actualiza el mensaje de espera con un mensaje de error
         setMessages(prev => {
           const updatedMessages = prev.slice(0, -1)
           return [...updatedMessages, { 
@@ -89,15 +90,13 @@ export default function Chatbot() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Main Content - centered, fixed width like Claude/ChatGPT */}
-      <main className="flex-grow flex flex-col overflow-hidden bg-gray-50">
-        <div className="max-w-3xl w-full mx-auto h-full flex flex-col">
-          {/* Messages container */}
-          <div className="flex-grow overflow-y-auto p-4 md:px-6">
-            {/* Welcome message if no messages yet */}
-            {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center px-4 py-6 text-center">
+    <div className="flex flex-col h-screen max-h-screen">
+      <main className="flex flex-col flex-grow overflow-hidden bg-gray-50">
+        <div className="max-w-3xl w-full mx-auto flex flex-col h-full">
+          {/* Área de mensajes con scroll */}
+          <div className="flex-grow overflow-y-auto px-4 py-4 md:px-6">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full px-4 py-6 text-center">
                 <div className="bg-blue-100 p-3 rounded-full mb-3">
                   <Bot size={28} className="text-blue-600" />
                 </div>
@@ -123,14 +122,11 @@ export default function Chatbot() {
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* Messages */}
-            {messages.length > 0 && (
-              <div className="space-y-6 pb-2">
+            ) : (
+              <div className="space-y-6">
                 {messages.map((message, index) => (
                   <div key={index} className="w-full">
-                    <div className="max-w-3xl mx-auto flex gap-4">
+                    <div className="flex gap-4">
                       <div className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center bg-gray-100">
                         {message.role === 'user' ? 
                           <User size={14} className="text-gray-600" /> : 
@@ -148,10 +144,9 @@ export default function Chatbot() {
                   </div>
                 ))}
                 
-                {/* Loading indicator */}
                 {isLoading && (
                   <div className="w-full">
-                    <div className="max-w-3xl mx-auto flex gap-4">
+                    <div className="flex gap-4">
                       <div className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center bg-gray-100">
                         <Bot size={14} className="text-blue-600" />
                       </div>
@@ -168,13 +163,14 @@ export default function Chatbot() {
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             )}
           </div>
 
-          {/* Input Form */}
-          <div className="p-3 border-t border-gray-200 bg-white">
-            <div className="max-w-3xl mx-auto">
+          {/* Input fijo en la parte inferior */}
+          <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white">
+            <div className="w-full">
               <form onSubmit={handleSubmit} className="flex space-x-2">
                 <input
                   type="text"
