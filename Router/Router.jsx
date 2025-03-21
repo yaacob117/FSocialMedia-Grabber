@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import { MainPage } from '../src/Pages/mainPage'
 import Signin from '../src/Components/Signin'
-import Chatbot from '../src/Components/Chatbot'
 
 const AppRouter = () => {
   return (
