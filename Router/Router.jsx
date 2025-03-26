@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import Signin from '../src/Components/Signin'
-import { MainPage } from '../src/Pages/mainPage.jsx'
+import { MainPage } from '../src/Pages/mainPage'
 
 const AppRouter = () => {
   return (
